@@ -54,7 +54,10 @@
             </table>
         </div>
         {% else %}
-        <p>No data available yet.</p>
+        <div>
+            <h2 class="text-xl font-semibold mb-2 text-center">Last 8 Quarters</h2>
+            <p class="text-gray-500">No data available yet.</p>
+        </div>
         {% endif %}
 
         {% if data.years %}
@@ -100,7 +103,10 @@
             </table>
         </div>
         {% else %}
-        <p>No data available yet.</p>
+        <div>
+            <h2 class="text-xl font-semibold mb-2 text-center">Last 3 Fiscal Years</h2>
+            <p class="text-gray-500">No data available yet.</p>
+        </div>
         {% endif %}
     </div>
 </body>
