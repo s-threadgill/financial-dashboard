@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>{{ ticker }} Financial Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="p-8">
+    <h1 class="text-2xl font-bold mb-2 text-center">{{ ticker }} Financial Dashboard</h1>
+    <p class="text-sm text-gray-500 mb-20 text-center">$ in Millions</p>
+
+    <div class="flex gap-8 items-start">
+        {% if data.quarters %}
+        <div>
+            <h2 class="text-xl font-semibold mb-2 text-center">Last 8 Quarters</h2>
+            <table class="border-collapse border border-gray-400">
+                <tr>
+                    <th class="border border-gray-400 px-3 py-1 bg-gray-100"></th>
+                    {% for q in data.quarters %}
+                    <th class="border border-gray-400 px-3 py-1 bg-gray-100">{{ q.date }}</th>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td class="border border-gray-400 px-3 py-1 font-semibold">Revenue</td>
+                    {% for q in data.quarters %}
+                    <td class="border border-gray-400 px-3 py-1">{{ format_money(q.revenue) }}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td class="border border-gray-400 px-3 py-1 font-semibold">Operating Income</td>
+                    {% for q in data.quarters %}
+                    <td class="border border-gray-400 px-3 py-1">{{ format_money(q.operating_income) }}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td class="border border-gray-400 px-3 py-1 font-semibold">EBITDA</td>
+                    {% for q in data.quarters %}
+                    <td class="border border-gray-400 px-3 py-1">{{ format_money(q.ebitda) }}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td class="border border-gray-400 px-3 py-1 font-semibold">Y/Y Growth</td>
+                    {% for q in data.quarters %}
+                    <td class="border border-gray-400 px-3 py-1">{{ q.yoy_growth }}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td class="border border-gray-400 px-3 py-1 font-semibold">Margin</td>
+                    {% for q in data.quarters %}
+                    <td class="border border-gray-400 px-3 py-1">{{ q.margin }}</td>
+                    {% endfor %}
+                </tr>
+            </table>
+        </div>
+        {% else %}
+        <p>No data available yet.</p>
+        {% endif %}
+
+        {% if data.years %}
+        <div>
+            <h2 class="text-xl font-semibold mb-2 text-center">Last 3 Fiscal Years</h2>
+            <table class="border-collapse border border-gray-400">
+                <tr>
+                    <th class="border border-gray-400 px-3 py-1 bg-gray-100"></th>
+                    {% for y in data.years %}
+                    <th class="border border-gray-400 px-3 py-1 bg-gray-100">{{ y.date }}</th>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td class="border border-gray-400 px-3 py-1 font-semibold">Revenue</td>
+                    {% for y in data.years %}
+                    <td class="border border-gray-400 px-3 py-1">{{ format_money(y.revenue) }}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td class="border border-gray-400 px-3 py-1 font-semibold">Operating Income</td>
+                    {% for y in data.years %}
+                    <td class="border border-gray-400 px-3 py-1">{{ format_money(y.operating_income) }}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td class="border border-gray-400 px-3 py-1 font-semibold">EBITDA</td>
+                    {% for y in data.years %}
+                    <td class="border border-gray-400 px-3 py-1">{{ format_money(y.ebitda) }}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td class="border border-gray-400 px-3 py-1 font-semibold">Y/Y Growth</td>
+                    {% for y in data.years %}
+                    <td class="border border-gray-400 px-3 py-1">{{ y.yoy_growth }}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td class="border border-gray-400 px-3 py-1 font-semibold">Margin</td>
+                    {% for y in data.years %}
+                    <td class="border border-gray-400 px-3 py-1">{{ y.margin }}</td>
+                    {% endfor %}
+                </tr>
+            </table>
+        </div>
+        {% else %}
+        <p>No data available yet.</p>
+        {% endif %}
+    </div>
+</body>
+
+</html>
