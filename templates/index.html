@@ -3,13 +3,18 @@
 
 <head>
     <title>Financial Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
-<body>
-    <h1>SEC Financial Dashboard</h1>
-    <form method="get" action="/dashboard">
-        <input type="text" name="ticker" placeholder="Enter ticker" />
-        <button type="submit">Submit</button>
+<body class="p-8">
+    <h1 class="text-2xl font-bold mb-2 text-center">SEC Financial Dashboard</h1>
+    <p class="text-sm text-gray-500 mb-20 text-center">Enter a ticker symbol to view financials</p>
+
+    <form method="get" action="/dashboard" class="flex gap-2 justify-center">
+        <input type="text" name="ticker" placeholder="Enter ticker"
+            class="border border-gray-400 px-3 py-1 focus:outline-none focus:border-gray-600" />
+        <button type="submit"
+            class="bg-gray-100 border border-gray-400 px-3 py-1 font-semibold hover:bg-gray-200">Submit</button>
     </form>
 </body>
 
