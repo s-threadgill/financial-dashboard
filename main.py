@@ -2,8 +2,6 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 import requests
-import re
-from datetime import datetime
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
@@ -29,72 +27,57 @@ def format_money(val):
     return "${:,.1f}".format(val / 1_000_000)
 
 
-def extract_by_frame(concept, pattern=None):
-    results = {}
+def extract_quarters_and_years(concept):
+    quarters = {}
+    years = {}
+
     for v in concept.get("units", {}).get("USD", []):
-        frame = v.get("frame", "")
-        if pattern:
-            if not pattern.match(frame):
-                continue
+        val = v.get("val")
+        fy = v.get("fy")
+        fp = v.get("fp")
+        form = v.get("form")
         end = v.get("end")
-        results[end] = {
-            "val": v["val"],
-            "fy": v.get("fy"),
-            "fp": v.get("fp"),
-            "end": end,
-        }
-    return results
+
+        if val is None or fy is None or fp is None:
+            continue
+
+        if fp in ["Q1", "Q2", "Q3"]:
+            quarters[(fy, fp)] = {"val": val, "fy": fy, "fp": fp, "end": end}
+        elif fp == "FY":
+            years[fy] = val
+
+    # calculate missing Q4
+    for fy in years:
+        fps_present = [fp for (f, fp) in quarters.keys() if f == fy]
+        if "Q4" not in fps_present:
+            q1 = quarters.get((fy, "Q1"), {}).get("val")
+            q2 = quarters.get((fy, "Q2"), {}).get("val")
+            q3 = quarters.get((fy, "Q3"), {}).get("val")
+            if q1 is not None and q2 is not None and q3 is not None:
+                q4_val = years[fy] - (q1 + q2 + q3)
+                fy_end = None
+                for v in concept.get("units", {}).get("USD", []):
+                    if v.get("fy") == fy and v.get("fp") == "FY":
+                        fy_end = v.get("end")
+                        break
+                quarters[(fy, "Q4")] = {
+                    "val": q4_val,
+                    "fy": fy,
+                    "fp": "Q4",
+                    "end": fy_end,
+                }
+
+    return quarters, years
 
 
-def calculate_missing_q4(quarters, years):
-    # DEBUG
-    print("---- Debug Q4 Calculation Start ----")
-    print("Original quarters received:")
-    for end, data in quarters.items():
-        print(
-            f"End={end}, FP={data.get('fp')}, Val={data.get('val')}, Year field={data.get('year', 'N/A')}"
-        )
-    print("Years dict (FY totals) keys:", list(years.keys()))
-
-    fy_groups = {}
-    for end, data in quarters.items():
-        if data["fp"] in ["Q1", "Q2", "Q3"]:
-            end_year = int(data["end"].split("-")[0])
-            fy_groups.setdefault(end_year, []).append(data)
-    # DEBUG
-    print("Quarter groups by calendar year of Q3 end:")
-    for year, qlist in fy_groups.items():
-        fps = [q["fp"] for q in qlist]
-        ends = [q["end"] for q in qlist]
-        vals = [q["val"] for q in qlist]
-        print(f"Year={year}, FPs={fps}, Ends={ends}, Vals={vals}")
-
-    for end_year, q_list in fy_groups.items():
-        # we have only Q1-Q3
-        q_map = {q["fp"]: q for q in q_list}
-        if all(fp in q_map for fp in ["Q1", "Q2", "Q3"]):
-            fy_total_year = end_year + 1
-            fy_total = years.get(fy_total_year)
-            if fy_total is None:
-                print(
-                    f" FY total not found for calendar year {fy_total_year}, skipping Q4 calc"
-                )
-                continue
-
-            total_q1_q3 = sum(q_map[fp]["val"] for fp in ["Q1", "Q2", "Q3"])
-            q4_val = fy_total - total_q1_q3
-            q4_end = f"{fy_total_year}-09-30"
-
-            quarters[q4_end] = {
-                "val": q4_val,
-                "fp": "Q4",
-                "end": q4_end,
-                "year": fy_total_year,
-            }
-            # DEBUG
-            print(f"Calculated Q4 for calendar year {fy_total_year}: {q4_val}")
-
-    return quarters
+def get_last_n_quarters(quarters_dict, n=8):
+    quarter_order = {"Q1": 1, "Q2": 2, "Q3": 3, "Q4": 4}
+    sorted_quarters = sorted(
+        quarters_dict.values(),
+        key=lambda x: (x["fy"], quarter_order[x["fp"]]),
+        reverse=True,
+    )
+    return sorted_quarters[:n]
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -118,61 +101,41 @@ def dashboard(request: Request, ticker: str):
     revenue = us_gaap.get("RevenueFromContractWithCustomerExcludingAssessedTax", {})
     oper_income = us_gaap.get("OperatingIncomeLoss", {})
 
-    # regex
-    q_frame_re = re.compile(r"^CY(\d{4})Q(\d)$")
-    y_frame_re = re.compile(r"^CY(\d{4})$")
+    rev_quarters, rev_years = extract_quarters_and_years(revenue)
+    oi_quarters, oi_years = extract_quarters_and_years(oper_income)
 
-    rev_q = extract_by_frame(revenue, q_frame_re)
-    oi_q = extract_by_frame(oper_income, q_frame_re)
+    last_8_quarters = get_last_n_quarters(rev_quarters, n=8)
+    last_3_years = sorted(rev_years.keys(), reverse=True)[:3]
 
-    years_rev = {}
-    years_oi = {}
-    for v in revenue.get("units", {}).get("USD", []):
-        if v.get("fp") == "FY":
-            years_rev[v["fy"]] = v["val"]
-    for v in oper_income.get("units", {}).get("USD", []):
-        if v.get("fp") == "FY":
-            years_oi[v["fy"]] = v["val"]
-
-    rev_q = calculate_missing_q4(rev_q, years_rev)
-    oi_q = calculate_missing_q4(oi_q, years_oi)
-
-    sorted_q_frames = sorted(rev_q.values(), key=lambda x: x["end"], reverse=True)[:8]
-
-    last_8_quarters = []
-    for q in sorted_q_frames:
-        quarter_year = q.get("year") or q["end"].split("-")[0]
-
-        last_8_quarters.append(
+    quarters_data = []
+    for q in last_8_quarters:
+        fy = q["fy"]
+        fp = q["fp"]
+        quarters_data.append(
             {
-                "date": (
-                    f"Q{q['fp'][-1]} {quarter_year}"
-                    if q["fp"].startswith("Q")
-                    else q["fp"]
-                ),
+                "date": f"{fp} {fy}",
                 "revenue": q["val"],
-                "operating_income": oi_q.get(q["end"], {}).get("val"),
+                "operating_income": oi_quarters.get((fy, fp), {}).get("val"),
                 "ebitda": None,
                 "yoy_growth": None,
                 "margin": None,
             }
         )
 
-    sorted_y_frames = sorted(years_rev.keys(), reverse=True)[:3]
-    last_3_years = []
-    for fy in sorted_y_frames:
-        last_3_years.append(
+    years_data = []
+    for fy in last_3_years:
+        years_data.append(
             {
                 "date": str(fy),
-                "revenue": years_rev.get(fy),
-                "operating_income": years_oi.get(fy),
+                "revenue": rev_years.get(fy),
+                "operating_income": oi_years.get(fy),
                 "ebitda": None,
                 "yoy_growth": None,
                 "margin": None,
             }
         )
 
-    company_data = {"quarters": last_8_quarters, "years": last_3_years}
+    company_data = {"quarters": quarters_data, "years": years_data}
 
     return templates.TemplateResponse(
         "dashboard.html",
