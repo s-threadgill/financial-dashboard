@@ -42,13 +42,13 @@
                 <tr>
                     <td class="border border-gray-400 px-3 py-1 font-semibold">Y/Y Growth</td>
                     {% for q in data.quarters %}
-                    <td class="border border-gray-400 px-3 py-1">{{ q.yoy_growth }}</td>
+                    <td class="border border-gray-400 px-3 py-1">{{ format_pct(q.yoy_growth) }}</td>
                     {% endfor %}
                 </tr>
                 <tr>
-                    <td class="border border-gray-400 px-3 py-1 font-semibold">Margin</td>
+                    <td class="border border-gray-400 px-3 py-1 font-semibold">Operating Margin</td>
                     {% for q in data.quarters %}
-                    <td class="border border-gray-400 px-3 py-1">{{ q.margin }}</td>
+                    <td class="border border-gray-400 px-3 py-1">{{ format_pct(q.margin) }}</td>
                     {% endfor %}
                 </tr>
             </table>
@@ -91,13 +91,13 @@
                 <tr>
                     <td class="border border-gray-400 px-3 py-1 font-semibold">Y/Y Growth</td>
                     {% for y in data.years %}
-                    <td class="border border-gray-400 px-3 py-1">{{ y.yoy_growth }}</td>
+                    <td class="border border-gray-400 px-3 py-1">{{ format_pct(y.yoy_growth) }}</td>
                     {% endfor %}
                 </tr>
                 <tr>
-                    <td class="border border-gray-400 px-3 py-1 font-semibold">Margin</td>
+                    <td class="border border-gray-400 px-3 py-1 font-semibold">Operating Margin</td>
                     {% for y in data.years %}
-                    <td class="border border-gray-400 px-3 py-1">{{ y.margin }}</td>
+                    <td class="border border-gray-400 px-3 py-1">{{ format_pct(y.margin) }}</td>
                     {% endfor %}
                 </tr>
             </table>

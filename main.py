@@ -27,6 +27,12 @@ def format_money(val):
     return "${:,.1f}".format(val / 1_000_000)
 
 
+def format_pct(val):
+    if val is None:
+        return "—"
+    return "{:,.1f}%".format(val)
+
+
 def extract_quarters_and_years(concept):
     quarters = {}
     years = {}
@@ -111,27 +117,45 @@ def dashboard(request: Request, ticker: str):
     for q in last_8_quarters:
         fy = q["fy"]
         fp = q["fp"]
+        rev = q["val"]
+        oi = oi_quarters.get((fy, fp), {}).get("val")
+
+        # y/y growth = compare to same quarter one year ago
+        prev_rev = rev_quarters.get((fy - 1, fp), {}).get("val")
+        yoy = ((rev - prev_rev) / prev_rev * 100) if prev_rev else None
+
+        # operating margin = (operating income / revenue) * 100
+        margin = (oi / rev * 100) if (oi is not None and rev) else None
+
         quarters_data.append(
             {
                 "date": f"{fp} {fy}",
-                "revenue": q["val"],
-                "operating_income": oi_quarters.get((fy, fp), {}).get("val"),
+                "revenue": rev,
+                "operating_income": oi,
                 "ebitda": None,
-                "yoy_growth": None,
-                "margin": None,
+                "yoy_growth": yoy,
+                "margin": margin,
             }
         )
 
     years_data = []
     for fy in last_3_years:
+        rev = rev_years.get(fy)
+        oi = oi_years.get(fy)
+
+        prev_rev = rev_years.get(fy - 1)
+        yoy = ((rev - prev_rev) / prev_rev * 100) if (rev and prev_rev) else None
+
+        margin = (oi / rev * 100) if (oi is not None and rev) else None
+
         years_data.append(
             {
                 "date": str(fy),
-                "revenue": rev_years.get(fy),
-                "operating_income": oi_years.get(fy),
+                "revenue": rev,
+                "operating_income": oi,
                 "ebitda": None,
-                "yoy_growth": None,
-                "margin": None,
+                "yoy_growth": yoy,
+                "margin": margin,
             }
         )
 
@@ -144,5 +168,6 @@ def dashboard(request: Request, ticker: str):
             "ticker": ticker.upper(),
             "data": company_data,
             "format_money": format_money,
+            "format_pct": format_pct,
         },
     )
